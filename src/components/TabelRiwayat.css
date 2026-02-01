@@ -1,0 +1,166 @@
+/* TabelRiwayat.css - Styling untuk tabel riwayat transaksi (DIPERBAIKI) */
+
+.tabel-container {
+  background-color: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.tabel-riwayat {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tabel-riwayat thead {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: var(--color-white);
+}
+
+.tabel-riwayat th {
+  padding: var(--spacing-md) var(--spacing-lg);
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tabel-riwayat tbody tr {
+  border-bottom: 1px solid var(--color-border);
+  transition: var(--transition);
+}
+
+.tabel-riwayat tbody tr:hover {
+  background-color: var(--color-bg);
+}
+
+.tabel-riwayat td {
+  padding: var(--spacing-md) var(--spacing-lg);
+  vertical-align: middle;
+}
+
+.kategori-cell {
+  font-weight: 500;
+  color: var(--color-dark);
+}
+
+.kategori-nama {
+  display: block;
+}
+
+.deskripsi-cell {
+  max-width: 250px;
+}
+
+.deskripsi-text {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-text);
+  font-style: italic;
+}
+
+.tanggal-cell {
+  color: var(--color-text-light);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.tanggal-update {
+  cursor: help;
+}
+
+.amount-cell {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: center;
+}
+
+.btn-action {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.btn-edit {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.btn-edit:hover {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-delete {
+  background-color: var(--color-pengeluaran-bg);
+  color: var(--color-danger);
+}
+
+.btn-delete:hover {
+  background-color: var(--color-danger);
+  color: var(--color-white);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .tabel-riwayat {
+    font-size: 13px;
+  }
+
+  .tabel-riwayat th,
+  .tabel-riwayat td {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+
+  .deskripsi-cell {
+    max-width: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .tabel-container {
+    overflow-x: auto;
+  }
+
+  .tabel-riwayat {
+    min-width: 900px;
+    font-size: 12px;
+  }
+
+  .tabel-riwayat th,
+  .tabel-riwayat td {
+    padding: var(--spacing-sm);
+  }
+
+  .deskripsi-cell {
+    max-width: 150px;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .btn-action {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -1,0 +1,208 @@
+/* ReviewBulanan.css - Styling untuk halaman review bulanan */
+
+.review-container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-xl);
+  gap: var(--spacing-lg);
+}
+
+.review-header h1 {
+  font-size: 32px;
+  color: var(--color-dark);
+  margin-bottom: var(--spacing-sm);
+}
+
+.btn-export {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: var(--color-white);
+  padding: var(--spacing-md) var(--spacing-xl);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-export:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-export:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Ringkasan Section */
+.ringkasan-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.card-ringkasan {
+  padding: var(--spacing-xl);
+}
+
+.card-header h3 {
+  font-size: 16px;
+  margin-bottom: var(--spacing-lg);
+  color: var(--color-dark);
+}
+
+.pemasukan-card {
+  border-left: 4px solid var(--color-pemasukan);
+}
+
+.pengeluaran-card {
+  border-left: 4px solid var(--color-pengeluaran);
+}
+
+.saldo-positif-card {
+  border-left: 4px solid var(--color-success);
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(129, 199, 132, 0.05) 100%);
+}
+
+.saldo-negatif-card {
+  border-left: 4px solid var(--color-danger);
+  background: linear-gradient(135deg, rgba(244, 67, 54, 0.05) 0%, rgba(229, 115, 115, 0.05) 100%);
+}
+
+.amount-large {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: var(--spacing-md);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Tabel Section */
+.tabel-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.tabel-header {
+  margin-bottom: var(--spacing-lg);
+}
+
+.tabel-header h2 {
+  font-size: 20px;
+  color: var(--color-dark);
+}
+
+.tabel-wrapper {
+  overflow-x: auto;
+}
+
+.tabel-review {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tabel-review thead {
+  background-color: var(--color-bg);
+}
+
+.tabel-review th {
+  padding: var(--spacing-md);
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-dark);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.tabel-review td {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tabel-review tbody tr:hover {
+  background-color: var(--color-bg);
+}
+
+.kategori-cell {
+  font-weight: 500;
+}
+
+.amount-cell {
+  font-weight: 600;
+}
+
+.tabel-review tfoot {
+  background-color: var(--color-bg);
+  font-weight: 600;
+}
+
+.total-row td {
+  padding: var(--spacing-lg) var(--spacing-md);
+  border-top: 2px solid var(--color-border);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.empty-table {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--color-text-light);
+  font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .tabel-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .review-header {
+    flex-direction: column;
+  }
+
+  .review-header h1 {
+    font-size: 24px;
+  }
+
+  .btn-export {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .ringkasan-section {
+    grid-template-columns: 1fr;
+  }
+
+  .amount-large {
+    font-size: 24px;
+  }
+
+  .tabel-review {
+    font-size: 12px;
+  }
+
+  .tabel-review th,
+  .tabel-review td {
+    padding: var(--spacing-sm);
+  }
+}

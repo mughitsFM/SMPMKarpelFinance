@@ -1,0 +1,316 @@
+/* global.css - Styling dasar untuk seluruh aplikasi */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Warna Utama */
+  --color-primary: #2196F3;
+  --color-primary-dark: #1976D2;
+  --color-primary-light: #BBDEFB;
+  
+  /* Warna Pemasukan */
+  --color-pemasukan: #4CAF50;
+  --color-pemasukan-light: #81C784;
+  --color-pemasukan-bg: #E8F5E9;
+  
+  /* Warna Pengeluaran */
+  --color-pengeluaran: #f44336;
+  --color-pengeluaran-light: #E57373;
+  --color-pengeluaran-bg: #FFEBEE;
+  
+  /* Warna Netral */
+  --color-dark: #212121;
+  --color-text: #424242;
+  --color-text-light: #757575;
+  --color-border: #E0E0E0;
+  --color-bg: #F5F5F5;
+  --color-white: #FFFFFF;
+  
+  /* Warna Status */
+  --color-success: #4CAF50;
+  --color-warning: #FF9800;
+  --color-danger: #f44336;
+  --color-info: #2196F3;
+  
+  /* Shadows */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  
+  /* Transitions */
+  --transition: all 0.3s ease;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+/* Utilities */
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-left {
+  text-align: left;
+}
+
+/* Loading Spinner */
+.spinner {
+  border: 3px solid var(--color-border);
+  border-top: 3px solid var(--color-primary);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto;
+}
+
+.spinner-small {
+  display: inline-block;
+  border: 2px solid var(--color-border);
+  border-top: 2px solid var(--color-white);
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  animation: spin 0.6s linear infinite;
+  margin-right: var(--spacing-sm);
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-state,
+.error-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  min-height: 400px;
+  text-align: center;
+}
+
+.error-state h3 {
+  color: var(--color-danger);
+  margin-bottom: var(--spacing-md);
+}
+
+.empty-state .empty-icon {
+  font-size: 64px;
+  margin-bottom: var(--spacing-md);
+}
+
+/* Buttons */
+.btn-primary,
+.btn-secondary,
+.btn-cancel,
+.btn-danger {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+  background-color: var(--color-white);
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-primary-light);
+}
+
+.btn-cancel {
+  background-color: var(--color-white);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background-color: var(--color-bg);
+}
+
+.btn-danger {
+  background-color: var(--color-danger);
+  color: var(--color-white);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: #d32f2f;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Cards */
+.card {
+  background-color: var(--color-white);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-pemasukan {
+  background-color: var(--color-pemasukan-bg);
+  color: var(--color-pemasukan);
+}
+
+.badge-pengeluaran {
+  background-color: var(--color-pengeluaran-bg);
+  color: var(--color-pengeluaran);
+}
+
+.badge-positif {
+  background-color: var(--color-pemasukan-bg);
+  color: var(--color-pemasukan);
+}
+
+.badge-negatif {
+  background-color: var(--color-pengeluaran-bg);
+  color: var(--color-pengeluaran);
+}
+
+/* Form Controls */
+.form-control,
+.select-filter {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  transition: var(--transition);
+}
+
+.form-control:focus,
+.select-filter:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.form-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  font-weight: 500;
+  color: var(--color-dark);
+}
+
+.required {
+  color: var(--color-danger);
+}
+
+.form-hint {
+  display: block;
+  margin-top: var(--spacing-xs);
+  font-size: 12px;
+  color: var(--color-text-light);
+}
+
+.form-hint.warning {
+  color: var(--color-warning);
+}
+
+/* Amount Styling */
+.amount {
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.pemasukan-amount {
+  color: var(--color-pemasukan);
+}
+
+.pengeluaran-amount {
+  color: var(--color-pengeluaran);
+}
+
+.saldo-positif {
+  color: var(--color-success);
+}
+
+.saldo-negatif {
+  color: var(--color-danger);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card {
+    padding: var(--spacing-md);
+  }
+  
+  .btn-primary,
+  .btn-secondary,
+  .btn-cancel,
+  .btn-danger {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 13px;
+  }
+}
