@@ -3,7 +3,7 @@
 
 import { initializeApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
-
+import { getAuth } from 'firebase/auth';
 /**
  * Konfigurasi Firebase dari environment variables
  * Pastikan semua variabel sudah diisi di file .env
@@ -22,10 +22,10 @@ const konfigurasiFirebase = {
  * Inisialisasi Firebase App
  */
 const aplikasiFirebase = initializeApp(konfigurasiFirebase);
-
+const auth = getAuth(aplikasiFirebase);
 /**
  * Mendapatkan referensi ke Realtime Database
  */
 const database = getDatabase(aplikasiFirebase);
 
-export { database };
+export { database, auth };
