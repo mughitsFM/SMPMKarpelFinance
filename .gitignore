@@ -42,3 +42,7 @@ yarn-error.log*
 
 # OS files
 .DS_Store
+
+**/seed.js
+/manajemen-keuangan copy.js
+/fungsi-tambahan-be copy.js

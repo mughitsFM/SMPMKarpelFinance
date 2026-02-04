@@ -55,26 +55,17 @@ function Riwayat() {
 
   // Real-time listener untuk perubahan data
   const setupRealtimeListener = () => {
-    const refPemasukan = ref(database, 'pemasukan');
-    const refPengeluaran = ref(database, 'pengeluaran');
+    const refTransaksi = ref(database, 'transaksi');
 
-    // Listener untuk pemasukan
-    onValue(refPemasukan, (snapshot) => {
-      updateDataFromFirebase();
-    });
-
-    // Listener untuk pengeluaran
-    onValue(refPengeluaran, (snapshot) => {
+    // Listener untuk transaksi
+    onValue(refTransaksi, (snapshot) => {
       updateDataFromFirebase();
     });
   };
 
   const cleanupRealtimeListener = () => {
-    const refPemasukan = ref(database, 'pemasukan');
-    const refPengeluaran = ref(database, 'pengeluaran');
-    
-    off(refPemasukan);
-    off(refPengeluaran);
+    const refTransaksi = ref(database, 'transaksi');
+    off(refTransaksi);
   };
 
   const updateDataFromFirebase = async () => {
@@ -365,7 +356,7 @@ function Riwayat() {
         </>
       ) : (
         <div className="empty-state">
-          <p className="empty-icon">📭</p>
+          <p className="empty-icon">🔭</p>
           <h3>Tidak Ada Data</h3>
           <p>
             {filterJenisTransaksi || filterKategori || filterBulan || filterTahun

@@ -45,18 +45,87 @@ function PopUp_KonfirmasiInput({ dataInput, daftarForm, onTutup, onBerhasil }) {
       
       const hasil = await kelolaInputUser(dataPemasukan, dataPengeluaran);
       
-      if (hasil.sukses) {
-        alert('Semua data berhasil disimpan!');
+      // Hitung total berhasil dan gagal
+      const totalBerhasil = hasil.pemasukan.berhasil + hasil.pengeluaran.berhasil;
+      const totalGagal = hasil.pemasukan.gagal + hasil.pengeluaran.gagal;
+      const totalTransaksi = dataPemasukan.length + dataPengeluaran.length;
+
+      if (totalGagal === 0) {
+        // Semua transaksi berhasil
+        alert(`✅ Sukses!\n\nSemua ${totalBerhasil} transaksi berhasil disimpan.`);
+        onBerhasil();
+      } else if (totalBerhasil > 0) {
+        // Sebagian berhasil, sebagian gagal
+        alert(
+          `⚠️ Perhatian!\n\n` +
+          `${totalBerhasil} transaksi berhasil disimpan.\n` +
+          `${totalGagal} transaksi gagal.\n\n` +
+          `Silakan periksa data yang gagal dan coba lagi.`
+        );
         onBerhasil();
       } else {
-        const totalGagal = hasil.pemasukan.gagal + hasil.pengeluaran.gagal;
-        const totalBerhasil = hasil.pemasukan.berhasil + hasil.pengeluaran.berhasil;
-        alert(`${totalBerhasil} data berhasil disimpan, ${totalGagal} data gagal.`);
-        onBerhasil();
+        // Semua gagal
+        alert(
+          `❌ Gagal!\n\n` +
+          `Tidak ada transaksi yang berhasil disimpan.\n` +
+          `${totalGagal} dari ${totalTransaksi} transaksi gagal.\n\n` +
+          `Silakan periksa data Anda dan coba lagi.`
+        );
       }
     } catch (error) {
       console.error('Error menyimpan data:', error);
-      alert('Gagal menyimpan data: ' + error.message);
+      
+      // Parse error message untuk memberikan pesan yang lebih spesifik
+      let errorMessage = error.message;
+      
+      // Deteksi error duplikasi "Saldo Bulan Lalu"
+      if (errorMessage.includes('saldo bulan lalu') && errorMessage.includes('sudah ada')) {
+        alert(
+          `❌ Duplikasi Saldo Bulan Lalu!\n\n` +
+          `${errorMessage}\n\n` +
+          `💡 Solusi:\n` +
+          `1. Hapus transaksi "Saldo Bulan Lalu" yang lama di halaman Riwayat\n` +
+          `2. Atau ubah bulan transaksi ke bulan yang berbeda\n` +
+          `3. Setiap bulan hanya boleh ada 1 "Saldo Bulan Lalu" untuk pemasukan dan pengeluaran`
+        );
+      } 
+      // Deteksi error validasi lainnya
+      else if (errorMessage.includes('harus diisi') || errorMessage.includes('tidak valid')) {
+        alert(
+          `❌ Data Tidak Valid!\n\n` +
+          `${errorMessage}\n\n` +
+          `Silakan periksa kembali semua form input.`
+        );
+      }
+      // Deteksi error Firebase Auth
+      else if (errorMessage.includes('User belum login')) {
+        alert(
+          `❌ Sesi Login Berakhir!\n\n` +
+          `Anda belum login atau sesi sudah berakhir.\n\n` +
+          `Silakan login kembali.`
+        );
+        // Optional: Redirect ke halaman login
+        // window.location.href = '/login';
+      }
+      // Deteksi error koneksi/Firebase
+      else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+        alert(
+          `❌ Masalah Koneksi!\n\n` +
+          `Tidak dapat terhubung ke server.\n\n` +
+          `💡 Solusi:\n` +
+          `1. Periksa koneksi internet Anda\n` +
+          `2. Refresh halaman\n` +
+          `3. Coba lagi dalam beberapa saat`
+        );
+      }
+      // Error umum lainnya
+      else {
+        alert(
+          `❌ Terjadi Kesalahan!\n\n` +
+          `${errorMessage}\n\n` +
+          `Silakan coba lagi atau hubungi administrator jika masalah berlanjut.`
+        );
+      }
     } finally {
       setSedangMenyimpan(false);
     }

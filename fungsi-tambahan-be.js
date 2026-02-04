@@ -1,62 +1,37 @@
-// fungsi-tambahan-be.js
-// Fungsi tambahan untuk mendukung fitur frontend
+// FUNGSI TAMBAHAN BACKEND
+// File: fungsi-tambahan-be.js
+// Export data ke Excel dengan template profesional
 
-import { database } from './konfigurasi-firebase.js';
-import { ref, get } from 'firebase/database';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { reviewPemasukanPengeluaranBulanan } from './manajemen-keuangan.js';
 
 // ==========================================
 // FUNGSI: EXPORT KE EXCEL
 // ==========================================
 
 /**
- * Export data pemasukan dan pengeluaran ke file Excel
- * 
+ * Export data review bulanan ke Excel dengan format profesional
+ * Template sesuai contoh: Laporan Kas Masuk dan Kas Keluar
  * @param {number} bulan - Bulan (1-12)
- * @param {number} tahun - Tahun (YYYY)
- * @returns {Promise<void>} File Excel akan di-download
+ * @param {number} tahun - Tahun
+ * @returns {Promise<object>} Hasil export
  */
-
-// FUNGSI EXPORT KE EXCEL - VERSI PROFESIONAL & RAPI
-// Dengan styling lengkap, border, warna, dan format siap cetak
-
-// FUNGSI EXPORT KE EXCEL - MENGGUNAKAN EXCELJS (SUPPORT FULL STYLING)
-// Install: npm install exceljs
-
-import ExcelJS from 'exceljs';
-
 export const exportKeExcel = async (bulan, tahun) => {
   try {
-    const key = `${tahun}_${bulan.toString().padStart(2, '0')}`;
+    // Ambil data dari fungsi reviewPemasukanPengeluaranBulanan
+    const data = await reviewPemasukanPengeluaranBulanan(bulan, tahun);
 
-    // Ambil data pemasukan dan pengeluaran dari Firebase
-    const refAllPemasukan = ref(database, `allPemasukan/${key}`);
-    const snapshotPemasukan = await get(refAllPemasukan);
-    const refAllPengeluaran = ref(database, `allPengeluaran/${key}`);
-    const snapshotPengeluaran = await get(refAllPengeluaran);
-
-    const pemasukanList = snapshotPemasukan.exists()
-      ? (snapshotPemasukan.val().kategoriList || [])
-      : [];
-    const pengeluaranList = snapshotPengeluaran.exists()
-      ? (snapshotPengeluaran.val().kategoriList || [])
-      : [];
-
-    const totalPemasukan = pemasukanList.reduce(
-      (s, it) => s + (Number(it.jumlahTotal) || 0),
-      0
-    );
-    const totalPengeluaran = pengeluaranList.reduce(
-      (s, it) => s + (Number(it.jumlahTotal) || 0),
-      0
-    );
-    const saldo = totalPemasukan - totalPengeluaran;
+    const pemasukanList = data.pemasukan.kategoriList || [];
+    const pengeluaranList = data.pengeluaran.kategoriList || [];
+    const totalPemasukan = data.pemasukan.totalKeseluruhan;
+    const totalPengeluaran = data.pengeluaran.totalKeseluruhan;
+    const saldo = data.saldo;
 
     const namaBulan = [
       'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
-    const namaBln = namaBulan[bulan - 1] || bulan;
+    const namaBln = namaBulan[bulan - 1];
 
     // ========================================
     // CREATE WORKBOOK & WORKSHEET
@@ -174,7 +149,7 @@ export const exportKeExcel = async (bulan, tahun) => {
       numFmt: '#,##0'
     };
 
-    // Saldo Row Style (berbeda untuk surplus/deficit)
+    // Saldo Row Style
     const saldoColor = saldo >= 0 ? 'FF4472C4' : 'FFC00000';
     const saldoLabelStyle = {
       font: { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFFFF' } },
@@ -421,73 +396,7 @@ export const exportKeExcel = async (bulan, tahun) => {
 
     return { sukses: true, namaFile };
   } catch (error) {
+    console.error('Error export excel:', error);
     throw new Error(`Gagal export ke Excel: ${error.message}`);
-  }
-};
-
-// ==========================================
-// FUNGSI: AMBIL DATA UNTUK GRAFIK
-// ==========================================
-
-/**
- * Mengambil data untuk grafik dashboard (6 bulan terakhir)
- * 
- * @returns {Promise<Array>} Array data untuk grafik
- */
-export const ambilDataGrafik = async () => {
-  try {
-    const sekarang = new Date();
-    const dataGrafik = [];
-
-    // Ambil data 6 bulan terakhir
-    for (let i = 5; i >= 0; i--) {
-      const tanggal = new Date(sekarang);
-      tanggal.setMonth(tanggal.getMonth() - i);
-      
-      const bulan = tanggal.getMonth() + 1;
-      const tahun = tanggal.getFullYear();
-      const key = `${tahun}_${bulan.toString().padStart(2, '0')}`;
-
-      const refAllPemasukan = ref(database, `allPemasukan/${key}`);
-      const refAllPengeluaran = ref(database, `allPengeluaran/${key}`);
-
-      const snapshotPemasukan = await get(refAllPemasukan);
-      const snapshotPengeluaran = await get(refAllPengeluaran);
-
-      let totalPemasukan = 0;
-      let totalPengeluaran = 0;
-
-      if (snapshotPemasukan.exists()) {
-        const data = snapshotPemasukan.val();
-        totalPemasukan = data.kategoriList.reduce(
-          (total, item) => total + item.jumlahTotal,
-          0
-        );
-      }
-
-      if (snapshotPengeluaran.exists()) {
-        const data = snapshotPengeluaran.val();
-        totalPengeluaran = data.kategoriList.reduce(
-          (total, item) => total + item.jumlahTotal,
-          0
-        );
-      }
-
-      const namaBulan = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
-      ];
-
-      dataGrafik.push({
-        bulan: namaBulan[bulan - 1],
-        pemasukan: totalPemasukan,
-        pengeluaran: totalPengeluaran,
-        saldo: totalPemasukan - totalPengeluaran
-      });
-    }
-
-    return dataGrafik;
-  } catch (error) {
-    throw new Error(`Gagal mengambil data grafik: ${error.message}`);
   }
 };

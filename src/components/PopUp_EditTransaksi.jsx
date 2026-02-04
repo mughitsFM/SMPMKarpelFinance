@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ambilSemuaKategori, editDataPemasukan, editDataPengeluaran } from '../../manajemen-keuangan.js';
+import { ambilSemuaKategori, editTransaksi } from '../../manajemen-keuangan.js';
 import './PopUp.css';
 
 function PopUp_EditTransaksi({ transaksi, onTutup, onBerhasil }) {
@@ -20,8 +20,8 @@ function PopUp_EditTransaksi({ transaksi, onTutup, onBerhasil }) {
       setSedangMemuat(true);
       const kategori = await ambilSemuaKategori();
       
-      // Ambil kategori sesuai tipe transaksi
-      if (transaksi.tipeTransaksi === 'pemasukan') {
+      // Ambil kategori sesuai jenis transaksi
+      if (transaksi.jenis === 'pemasukan') {
         setDaftarKategori(kategori.pemasukan || []);
       } else {
         setDaftarKategori(kategori.pengeluaran || []);
@@ -67,12 +67,7 @@ function PopUp_EditTransaksi({ transaksi, onTutup, onBerhasil }) {
       const uraianUpdate = uraianBaru !== transaksi.uraian ? uraianBaru : null;
       const jumlahUpdate = jumlahBaru !== transaksi.jumlah ? jumlahBaru : null;
 
-      // Edit sesuai tipe transaksi
-      if (transaksi.tipeTransaksi === 'pemasukan') {
-        await editDataPemasukan(transaksi.id, kategoriUpdate, uraianUpdate, jumlahUpdate);
-      } else {
-        await editDataPengeluaran(transaksi.id, kategoriUpdate, uraianUpdate, jumlahUpdate);
-      }
+      await editTransaksi(transaksi.idTransaksi, kategoriUpdate, uraianUpdate, jumlahUpdate);
 
       alert('Data berhasil diupdate!');
       onBerhasil();
@@ -177,13 +172,13 @@ function PopUp_EditTransaksi({ transaksi, onTutup, onBerhasil }) {
     <div className="popup-overlay" onClick={onTutup}>
       <div className="popup-content" onClick={(e) => e.stopPropagation()}>
         <div className="popup-header">
-          <h2>Edit Transaksi {transaksi.tipeTransaksi === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</h2>
+          <h2>Edit Transaksi {transaksi.jenis === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</h2>
           <button onClick={onTutup} className="btn-close">×</button>
         </div>
 
         <form onSubmit={handleSubmit} className="popup-form">
           <div className="info-transaksi">
-            <p><strong>ID:</strong> {transaksi.id}</p>
+            <p><strong>ID:</strong> {transaksi.idTransaksi}</p>
             <p><strong>Tanggal:</strong> {new Date(transaksi.tanggal).toLocaleDateString('id-ID')}</p>
           </div>
 

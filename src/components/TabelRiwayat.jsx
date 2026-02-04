@@ -37,21 +37,20 @@ function TabelRiwayat({ data, onEdit, onHapus }) {
             <th>Jenis</th>
             <th>Deskripsi</th>
             <th className="text-right">Jumlah</th>
-            <th>Tanggal Input</th>
-            <th>Terakhir Update</th>
+            <th>Tanggal</th>
             <th className="text-center">Aktivitas</th>
           </tr>
         </thead>
         <tbody>
           {data.map((item, index) => (
-            <tr key={item.id}>
+            <tr key={item.idTransaksi}>
               <td>{index + 1}</td>
               <td className="kategori-cell">
                 <span className="kategori-nama">{item.kategori}</span>
               </td>
               <td>
-                <span className={`badge ${item.tipeTransaksi === 'pemasukan' ? 'badge-pemasukan' : 'badge-pengeluaran'}`}>
-                  {item.tipeTransaksi === 'pemasukan' ? '📈 Pemasukan' : '📉 Pengeluaran'}
+                <span className={`badge ${item.jenis === 'pemasukan' ? 'badge-pemasukan' : 'badge-pengeluaran'}`}>
+                  {item.jenis === 'pemasukan' ? '📈 Pemasukan' : '📉 Pengeluaran'}
                 </span>
               </td>
               <td className="deskripsi-cell">
@@ -59,16 +58,11 @@ function TabelRiwayat({ data, onEdit, onHapus }) {
                   {item.uraian}
                 </span>
               </td>
-              <td className={`text-right amount-cell ${item.tipeTransaksi === 'pemasukan' ? 'pemasukan-amount' : 'pengeluaran-amount'}`}>
+              <td className={`text-right amount-cell ${item.jenis === 'pemasukan' ? 'pemasukan-amount' : 'pengeluaran-amount'}`}>
                 {formatRupiah(item.jumlah)}
               </td>
               <td className="tanggal-cell">
                 {formatTanggal(item.tanggal)}
-              </td>
-              <td className="tanggal-cell">
-                <span className="tanggal-update" title={formatWaktu(item.tanggalUpdate)}>
-                  {formatTanggal(item.tanggalUpdate)}
-                </span>
               </td>
               <td className="text-center">
                 <div className="action-buttons">

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { hapusDataPemasukan, hapusDataPengeluaran } from '../../manajemen-keuangan.js';
+import { hapusTransaksi } from '../../manajemen-keuangan.js';
 import './PopUp.css';
 
 function PopUp_HapusTransaksi({ transaksi, onTutup, onBerhasil }) {
@@ -24,14 +24,7 @@ function PopUp_HapusTransaksi({ transaksi, onTutup, onBerhasil }) {
   const handleKonfirmasiHapus = async () => {
     try {
       setSedangMenghapus(true);
-
-      // Hapus sesuai tipe transaksi
-      if (transaksi.tipeTransaksi === 'pemasukan') {
-        await hapusDataPemasukan(transaksi.id);
-      } else {
-        await hapusDataPengeluaran(transaksi.id);
-      }
-
+      await hapusTransaksi(transaksi.idTransaksi);
       alert('Data berhasil dihapus!');
       onBerhasil();
     } catch (error) {
@@ -63,8 +56,8 @@ function PopUp_HapusTransaksi({ transaksi, onTutup, onBerhasil }) {
           <div className="detail-hapus">
             <div className="detail-row">
               <span className="detail-label">Tipe:</span>
-              <span className={`detail-value badge ${transaksi.tipeTransaksi === 'pemasukan' ? 'badge-pemasukan' : 'badge-pengeluaran'}`}>
-                {transaksi.tipeTransaksi === 'pemasukan' ? '📈 Pemasukan' : '📉 Pengeluaran'}
+              <span className={`detail-value badge ${transaksi.jenis === 'pemasukan' ? 'badge-pemasukan' : 'badge-pengeluaran'}`}>
+                {transaksi.jenis === 'pemasukan' ? '📈 Pemasukan' : '📉 Pengeluaran'}
               </span>
             </div>
             <div className="detail-row">
@@ -77,7 +70,7 @@ function PopUp_HapusTransaksi({ transaksi, onTutup, onBerhasil }) {
             </div>
             <div className="detail-row">
               <span className="detail-label">Jumlah:</span>
-              <span className={`detail-value amount ${transaksi.tipeTransaksi === 'pemasukan' ? 'pemasukan-amount' : 'pengeluaran-amount'}`}>
+              <span className={`detail-value amount ${transaksi.jenis === 'pemasukan' ? 'pemasukan-amount' : 'pengeluaran-amount'}`}>
                 {formatRupiah(transaksi.jumlah)}
               </span>
             </div>
@@ -87,7 +80,7 @@ function PopUp_HapusTransaksi({ transaksi, onTutup, onBerhasil }) {
             </div>
             <div className="detail-row">
               <span className="detail-label">ID:</span>
-              <span className="detail-value detail-id">{transaksi.id}</span>
+              <span className="detail-value detail-id">{transaksi.idTransaksi}</span>
             </div>
           </div>
         </div>
