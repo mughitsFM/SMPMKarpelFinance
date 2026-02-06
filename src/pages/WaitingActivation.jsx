@@ -1,4 +1,7 @@
+import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { ref, onValue, off } from 'firebase/database';
+import { auth, database } from '../../konfigurasi-firebase.js';
 import { KONTAK_PENGEMBANG, logoutUser } from '../../auth-firebase.js';
 import '../styles/WaitingActivation.css';
 
@@ -7,6 +10,52 @@ function WaitingActivation() {
   const navigate = useNavigate();
   const { email, username } = location.state || {};
 
+  // ==========================================
+  // REAL-TIME MONITORING STATUS AKUN
+  // ==========================================
+  useEffect(() => {
+    const user = auth.currentUser;
+    
+    // Jika tidak ada user yang login, redirect ke login
+    if (!user) {
+      alert('Akun belum diaktifkan oleh administrator.');
+      navigate('/login');
+      return;
+    }
+
+    // Setup listener untuk monitor perubahan status akun
+    const refAkun = ref(database, `akun/${user.uid}/statusAktif`);
+    
+    const unsubscribe = onValue(refAkun, (snapshot) => {
+      if (snapshot.exists()) {
+        const statusAktif = snapshot.val();
+        
+        // Jika akun sudah aktif, redirect ke dashboard
+        if (statusAktif === true) {
+          console.log('✅ Akun telah diaktifkan! Redirect ke dashboard...');
+          
+          // Optional: Tampilkan notifikasi sukses
+          alert('🎉 Selamat! Akun Anda telah diaktifkan oleh administrator.');
+          
+          // Redirect ke dashboard
+          navigate('/');
+          window.location.reload();
+        }
+      }
+    }, (error) => {
+      console.error('Error monitoring status akun:', error);
+    });
+
+    // Cleanup listener saat component unmount
+    return () => {
+      off(refAkun);
+      unsubscribe();
+    };
+  }, [navigate]);
+
+  // ==========================================
+  // HANDLER FUNCTIONS
+  // ==========================================
   const handleLogout = async () => {
     try {
       await logoutUser();
@@ -66,14 +115,20 @@ function WaitingActivation() {
                 </div>
               </div>
             )}
+
+            {/* Real-time Status Indicator */}
+            <div className="status-indicator">
+              <div className="pulse-dot"></div>
+              <span className="status-text">Menunggu aktivasi oleh admin...</span>
+            </div>
           </div>
 
           <div className="steps-section">
             <h3 className="steps-title">Langkah Selanjutnya:</h3>
             <ol className="steps-list">
               <li>Hubungi administrator untuk meminta aktivasi akun</li>
-              <li>Setelah akun diaktifkan, Anda akan menerima notifikasi</li>
-              <li>Login kembali menggunakan email dan password Anda</li>
+              <li>Halaman ini akan otomatis berpindah setelah akun diaktifkan</li>
+              <li>Anda dapat langsung menggunakan aplikasi</li>
             </ol>
           </div>
 

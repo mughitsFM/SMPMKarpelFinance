@@ -50,3 +50,4 @@ yarn-error.log*
 /src/components/PopUp copy.css
 /src/App copy.jsx
 /src/pages/Login copy.jsx
+/src/pages/WaitingActivation copy.jsx

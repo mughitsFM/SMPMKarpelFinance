@@ -416,3 +416,73 @@
     width: 100%;
   }
 }
+
+
+/* ==========================================
+   CSS TAMBAHAN - Status Indicator
+   Tambahkan ke file WaitingActivation.css yang sudah ada
+   ========================================== */
+
+/* Status Indicator - Real-time monitoring */
+.status-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 20px 0;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+  border-radius: 50px;
+  border: 2px solid rgba(102, 126, 234, 0.3);
+}
+
+/* Pulse Dot Animation */
+.pulse-dot {
+  width: 12px;
+  height: 12px;
+  background: #667eea;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+  }
+  
+  50% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+  }
+  
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+  }
+}
+
+.status-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #667eea;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .status-indicator {
+    margin: 15px 0;
+    padding: 10px 20px;
+  }
+
+  .status-text {
+    font-size: 12px;
+  }
+
+  .pulse-dot {
+    width: 10px;
+    height: 10px;
+  }
+}
