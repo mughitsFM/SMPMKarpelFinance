@@ -51,3 +51,4 @@ yarn-error.log*
 /src/App copy.jsx
 /src/pages/Login copy.jsx
 /src/pages/WaitingActivation copy.jsx
+**/rebuild-agregasi.js
