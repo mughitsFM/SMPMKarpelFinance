@@ -110,7 +110,6 @@ function PopUp_SetSaldoAwal({ onTutup, onBerhasil }) {
                 onChange={handleInputChange}
                 placeholder="0"
                 className="form-control currency-input"
-                required
               />
             </div>
             <small className="form-hint">Ketik "0" jika ingin memulai dari nol</small>
