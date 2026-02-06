@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { loginUser } from '../../auth-firebase.js';
 import '../styles/Login.css';
 
@@ -25,9 +25,17 @@ function Login() {
       setSedangLogin(true);
       const result = await loginUser(email, password);
       
-      if (result.sukses) {
-        // Redirect ke dashboard setelah login berhasil
+      if (result.sukses && result.statusAktif) {
+        // Login berhasil dan akun aktif
         navigate('/');
+      } else if (!result.statusAktif) {
+        // Akun belum aktif, redirect ke waiting activation
+        navigate('/waiting-activation', {
+          state: {
+            email: result.user.email,
+            username: result.user.displayName
+          }
+        });
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -119,7 +127,7 @@ function Login() {
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Passwowrd Kamu"
+                placeholder="Password Kamu"
                 className="form-input"
                 disabled={sedangLogin}
                 autoComplete="current-password"
@@ -162,6 +170,10 @@ function Login() {
               'Masuk'
             )}
           </button>
+
+          <div className="register-link">
+            <p>Belum punya akun? <Link to="/register">Daftar di sini</Link></p>
+          </div>
         </form>
 
         {/* Footer */}
@@ -170,7 +182,7 @@ function Login() {
             <svg className="badge-icon" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
-            <span className="footer-text">Akses terbatas untuk administrator</span>
+            <span className="footer-text">Sistem manajemen keuangan sekolah</span>
           </div>
         </div>
       </div>

@@ -1,12 +1,16 @@
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import Dashboard from './pages/Dashboard';
-import InputData from './pages/InputData';
-import Riwayat from './pages/Riwayat';
-import ReviewBulanan from './pages/ReviewBulanan';
-import Login from './pages/Login';
-import ProtectedRoute from './components/ProtectedRoute';
-import { onAuthChange, logoutUser, getUserInfo } from '../auth-firebase.js';
+import Dashboard from './pages/Dashboard.jsx';
+import InputData from './pages/InputData.jsx';
+import Riwayat from './pages/Riwayat.jsx';
+import ReviewBulanan from './pages/ReviewBulanan.jsx';
+import Login from './pages/Login.jsx';
+import Register from './pages/Register.jsx';
+import WaitingActivation from './pages/WaitingActivation.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
+import PopUp_SetSaldoAwal from './components/PopUp_SetSaldoAwal.jsx';
+import { onAuthChange, logoutUser } from '../auth-firebase.js';
+import { cekStatusSaldoAwal } from '../manajemen-keuangan.js';
 import './styles/App.css';
 
 function App() {
@@ -21,6 +25,7 @@ function AppContent() {
   const location = useLocation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showPopupSaldoAwal, setShowPopupSaldoAwal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,11 +33,27 @@ function AppContent() {
     const unsubscribe = onAuthChange((currentUser) => {
       setUser(currentUser);
       setLoading(false);
+
+      // Cek apakah perlu menampilkan popup saldo awal
+      if (currentUser && currentUser.statusAktif) {
+        checkSaldoAwal(currentUser);
+      }
     });
 
     // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
+
+  const checkSaldoAwal = async (currentUser) => {
+    try {
+      const status = await cekStatusSaldoAwal();
+      if (!status.sudahDiSet) {
+        setShowPopupSaldoAwal(true);
+      }
+    } catch (error) {
+      console.error('Error checking saldo awal:', error);
+    }
+  };
 
   const handleLogout = async () => {
     const confirm = window.confirm('Yakin ingin logout?');
@@ -41,15 +62,21 @@ function AppContent() {
     try {
       await logoutUser();
       navigate('/login', { replace: true });
-
     } catch (error) {
       console.error('Error logout:', error);
       alert('Gagal logout: ' + error.message);
     }
   };
 
-  // Jangan render navigation di halaman login
-  const isLoginPage = location.pathname === '/login';
+  const handleSaldoAwalBerhasil = () => {
+    setShowPopupSaldoAwal(false);
+    // Refresh user data
+    checkSaldoAwal(user);
+  };
+
+  // Jangan render navigation di halaman login, register, dan waiting activation
+  const publicPages = ['/login', '/register', '/waiting-activation'];
+  const isPublicPage = publicPages.includes(location.pathname);
 
   if (loading) {
     return (
@@ -64,7 +91,7 @@ function AppContent() {
 
   return (
     <div className="app">
-      {!isLoginPage && user && (
+      {!isPublicPage && user && (
         <nav className="navigation">
           <div className="nav-header">
             <div className="nav-logo">
@@ -125,14 +152,24 @@ function AppContent() {
         </nav>
       )}
 
-      <main className={`main-content ${!isLoginPage && user ? 'with-nav' : 'no-nav'}`}>
+      <main className={`main-content ${!isPublicPage && user ? 'with-nav' : 'no-nav'}`}>
         <Routes>
-          {/* Public Route - Login */}
+          {/* Public Routes */}
           <Route 
             path="/login" 
             element={
               user ? <Navigate to="/" replace /> : <Login />
             } 
+          />
+          <Route 
+            path="/register" 
+            element={
+              user ? <Navigate to="/" replace /> : <Register />
+            } 
+          />
+          <Route 
+            path="/waiting-activation" 
+            element={<WaitingActivation />} 
           />
 
           {/* Protected Routes */}
@@ -176,6 +213,14 @@ function AppContent() {
           />
         </Routes>
       </main>
+
+      {/* Popup Saldo Awal */}
+      {showPopupSaldoAwal && user && (
+        <PopUp_SetSaldoAwal
+          onTutup={() => setShowPopupSaldoAwal(false)}
+          onBerhasil={handleSaldoAwalBerhasil}
+        />
+      )}
     </div>
   );
 }

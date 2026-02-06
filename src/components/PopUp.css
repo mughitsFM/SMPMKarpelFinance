@@ -135,6 +135,7 @@
 
 .popup-form {
   padding: var(--spacing-xl);
+  overflow: auto;
 }
 
 .popup-actions {
@@ -419,6 +420,243 @@
   color: var(--color-text-light);
 }
 
+/* ==========================================
+   POPUP SET SALDO AWAL - UPDATED
+   ========================================== */
+
+.info-box-saldo {
+  display: flex;
+  gap: var(--spacing-md);
+  background-color: #fff7ed;
+  border: 2px solid #fed7aa;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.info-icon {
+  width: 24px;
+  height: 24px;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.info-text {
+  flex: 1;
+  font-size: 14px;
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+.info-text p {
+  margin: 0 0 var(--spacing-sm) 0;
+}
+
+.info-text p:last-child {
+  margin-bottom: 0;
+}
+
+.info-text strong {
+  color: var(--color-dark);
+}
+
+/* Form Label dengan Required Indicator */
+.form-label-required {
+  display: block;
+  font-weight: 600;
+  color: var(--color-dark);
+  margin-bottom: var(--spacing-sm);
+  font-size: 14px;
+}
+
+.form-label-required::after {
+  content: ' *';
+  color: var(--color-danger);
+}
+
+/* Input dengan Icon Calendar */
+.input-icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon-calendar {
+  position: absolute;
+  left: 1rem;
+  width: 20px;
+  height: 20px;
+  color: var(--color-text-light);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.input-with-icon {
+  padding-left: 3rem !important;
+}
+
+/* Input Date Styling */
+input[type="date"].form-control {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding: 0.75rem 1rem 0.75rem 3rem;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  color: var(--color-dark);
+  background-color: var(--color-white);
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+input[type="date"].form-control:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+input[type="date"].form-control::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Currency Input */
+.input-currency-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.currency-prefix {
+  position: absolute;
+  left: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  pointer-events: none;
+  z-index: 1;
+  font-size: 14px;
+}
+
+.currency-input {
+  padding-left: 3rem !important;
+  font-weight: 600;
+  text-align: left;
+  font-size: 16px;
+}
+
+.form-hint {
+  display: block;
+  margin-top: var(--spacing-xs);
+  font-size: 12px;
+  color: var(--color-text-light);
+  font-style: italic;
+}
+
+/* Preview Saldo Wrapper */
+.preview-saldo-wrapper {
+  background: linear-gradient(135deg, #f0f4ff 0%, #fef3c7 100%);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.preview-saldo {
+  background-color: var(--color-white);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-md);
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.preview-label {
+  font-size: 13px;
+  color: var(--color-text-light);
+  margin-bottom: var(--spacing-sm);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.preview-amount {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Preview Info */
+.preview-info {
+  background-color: var(--color-white);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.preview-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.preview-info-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.preview-info-label {
+  font-size: 13px;
+  color: var(--color-text-light);
+  font-weight: 500;
+}
+
+.preview-info-value {
+  font-size: 14px;
+  color: var(--color-dark);
+  font-weight: 600;
+}
+
+.preview-pemasukan {
+  color: var(--color-pemasukan) !important;
+}
+
+/* Saldo Info Note */
+.saldo-info-note {
+  display: flex;
+  gap: var(--spacing-md);
+  background-color: #e0f2fe;
+  border: 2px solid #bae6fd;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.note-icon {
+  width: 20px;
+  height: 20px;
+  color: #0284c7;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.saldo-info-note p {
+  margin: 0;
+  font-size: 13px;
+  color: #075985;
+  line-height: 1.5;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .popup-overlay {
@@ -466,5 +704,21 @@
     flex-direction: column;
     align-items: flex-start;
     gap: var(--spacing-sm);
+  }
+
+  .info-box-saldo {
+    flex-direction: column;
+  }
+
+  .preview-amount {
+    font-size: 28px;
+  }
+
+  .saldo-info-note {
+    flex-direction: column;
+  }
+
+  .preview-saldo-wrapper {
+    padding: var(--spacing-md);
   }
 }

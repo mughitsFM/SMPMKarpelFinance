@@ -148,7 +148,6 @@ function FormInputKeuangan({ id, nomor, daftarKategori, onPerubahan, onHapus, bi
             onChange={(e) => setJumlah(e.target.value)}
             placeholder="0"
             className="form-control"
-            min="1"
             step="1"
             required
           />

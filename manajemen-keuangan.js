@@ -1,8 +1,8 @@
-// SISTEM MANAJEMEN KEUANGAN
+// SISTEM MANAJEMEN KEUANGAN - UPDATED
 // File: manajemen-keuangan.js
-// Struktur Database Baru dengan Multi-Akun Support
+// Struktur Database Baru: Kategori per User
 
-import { ref, get, set, update, remove, push, query, orderByChild, equalTo } from 'firebase/database';
+import { ref, get, set, update, remove } from 'firebase/database';
 import { database } from './konfigurasi-firebase.js';
 import { auth } from './auth-firebase.js';
 import { 
@@ -12,8 +12,7 @@ import {
   ambilTimestampSekarang,
   validasiAngkaPositif,
   validasiStringTidakKosong,
-  buatKeyBulanTahun,
-  parseKeyBulanTahun
+  buatKeyBulanTahun
 } from './utilitas.js';
 
 // ==========================================
@@ -32,23 +31,77 @@ const getIdAkun = () => {
   return user.uid;
 };
 
+
+// PERBAIKAN 1: Helper function untuk cek kategori khusus
+const isKategoriSaldoBulanLalu = (namaKategori) => {
+  return namaKategori.toLowerCase().includes('saldo bulan lalu');
+};
+
+const isKategoriSaldoAwal = (namaKategori) => {
+  return namaKategori.toLowerCase().includes('saldo awal');
+};
+
+// PERBAIKAN 2: Validasi jumlah yang support minus untuk "Saldo Bulan Lalu"
+/**
+ * Validasi jumlah transaksi
+ * KHUSUS: Kategori "Saldo Bulan Lalu" boleh minus, kategori lain tidak boleh
+ * @param {number} jumlah - Jumlah transaksi
+ * @param {string} namaKategori - Nama kategori
+ * @returns {boolean} Valid atau tidak
+ */
+const validasiJumlahTransaksi = (jumlah, namaKategori) => {
+  // Harus berupa angka
+  if (typeof jumlah !== 'number' || isNaN(jumlah)) {
+    return false;
+  }
+  
+  // Kategori "Saldo Bulan Lalu" boleh minus
+  if (isKategoriSaldoBulanLalu(namaKategori)) {
+    return true; // Boleh positif atau negatif
+  }
+  
+  // Kategori lain harus positif
+  return jumlah > 0;
+};
+
 // ==========================================
-// FUNGSI 1: TAMBAH KATEGORI
+// FUNGSI 1: TAMBAH KATEGORI (PER USER)
 // ==========================================
 
 /**
- * Menambahkan kategori baru (pemasukan atau pengeluaran)
+ * Menambahkan kategori baru untuk user yang login
  * @param {Array} daftarKategori - Array of {tipe: 'pemasukan'|'pengeluaran', nama: string}
  * @returns {Promise<object>} Hasil operasi
  */
 export const tambahKategori = async (daftarKategori) => {
   try {
+    const idAkun = getIdAkun();
+    
     if (!Array.isArray(daftarKategori) || daftarKategori.length === 0) {
       throw new Error('Daftar kategori harus berupa array dan tidak boleh kosong');
     }
 
     const errors = [];
     const updates = {};
+
+    // Ambil kategori yang sudah ada untuk validasi duplikasi
+    const refKategoriUser = ref(database, `kategori/${idAkun}`);
+    const snapshotKategori = await get(refKategoriUser);
+    
+    let kategoriExisting = {
+      pemasukan: [],
+      pengeluaran: []
+    };
+    
+    if (snapshotKategori.exists()) {
+      const data = snapshotKategori.val();
+      if (data.pemasukan) {
+        kategoriExisting.pemasukan = Object.values(data.pemasukan);
+      }
+      if (data.pengeluaran) {
+        kategoriExisting.pengeluaran = Object.values(data.pengeluaran);
+      }
+    }
 
     for (const kategori of daftarKategori) {
       // Validasi
@@ -62,11 +115,22 @@ export const tambahKategori = async (daftarKategori) => {
         continue;
       }
 
+      // Cek duplikasi nama kategori
+      const namaTrimmed = kategori.nama.trim().toLowerCase();
+      const sudahAda = kategoriExisting[kategori.tipe].some(
+        k => k.namaKategori.toLowerCase() === namaTrimmed
+      );
+
+      if (sudahAda) {
+        errors.push(`Kategori "${kategori.nama}" untuk ${kategori.tipe} sudah ada`);
+        continue;
+      }
+
       // Generate ID unik untuk kategori
       const idKategori = buatIdUnik();
       
-      // Path: kategori/{tipe}/{idKategori}
-      const pathKategori = `kategori/${kategori.tipe}/${idKategori}`;
+      // Path: kategori/{idAkun}/{tipe}/{idKategori}
+      const pathKategori = `kategori/${idAkun}/${kategori.tipe}/${idKategori}`;
       
       updates[pathKategori] = {
         id: idKategori,
@@ -94,16 +158,18 @@ export const tambahKategori = async (daftarKategori) => {
 };
 
 // ==========================================
-// FUNGSI 2: AMBIL SEMUA KATEGORI
+// FUNGSI 2: AMBIL KATEGORI USER
 // ==========================================
 
 /**
- * Mengambil semua kategori yang tersedia
+ * Mengambil semua kategori milik user yang login
+ * PERBAIKAN: Filter kategori "Saldo Awal" menggunakan namaKategori (bukan nama)
  * @returns {Promise<object>} Object dengan property pemasukan dan pengeluaran
  */
 export const ambilSemuaKategori = async () => {
   try {
-    const refKategori = ref(database, 'kategori');
+    const idAkun = getIdAkun();
+    const refKategori = ref(database, `kategori/${idAkun}`);
     const snapshot = await get(refKategori);
     
     const hasil = {
@@ -114,9 +180,11 @@ export const ambilSemuaKategori = async () => {
     if (snapshot.exists()) {
       const data = snapshot.val();
       
-      // Ambil kategori pemasukan
+      // Ambil kategori pemasukan, EXCLUDE "Saldo Awal"
       if (data.pemasukan) {
-        hasil.pemasukan = Object.values(data.pemasukan);
+        hasil.pemasukan = Object.values(data.pemasukan).filter(
+          (kategori) => !isKategoriSaldoAwal(kategori.namaKategori) // PERBAIKAN: gunakan namaKategori
+        );
       }
       
       // Ambil kategori pengeluaran
@@ -134,12 +202,14 @@ export const ambilSemuaKategori = async () => {
 };
 
 // ==========================================
-// FUNGSI 3: INPUT TRANSAKSI
+// FUNGSI 3 (DIPERBAIKI FINAL): INPUT TRANSAKSI
 // ==========================================
 
 /**
  * Menambahkan transaksi baru (pemasukan atau pengeluaran)
- * Format data: {kategori, uraian, jumlah, tanggal}
+ * PERBAIKAN: 
+ * 1. Saldo total tidak berubah jika kategori = "Saldo Bulan Lalu"
+ * 2. Support input minus untuk kategori "Saldo Bulan Lalu"
  * @param {Array} dataPemasukan - Array transaksi pemasukan
  * @param {Array} dataPengeluaran - Array transaksi pengeluaran
  * @returns {Promise<object>} Hasil operasi
@@ -166,9 +236,16 @@ export const kelolaInputUser = async (dataPemasukan, dataPengeluaran) => {
           if (!validasiStringTidakKosong(data.uraian)) {
             throw new Error('Uraian harus diisi');
           }
-          if (!validasiAngkaPositif(data.jumlah)) {
-            throw new Error('Jumlah harus angka positif');
+          
+          // PERBAIKAN: Validasi jumlah yang support minus untuk "Saldo Bulan Lalu"
+          if (!validasiJumlahTransaksi(data.jumlah, data.kategori)) {
+            if (isKategoriSaldoBulanLalu(data.kategori)) {
+              throw new Error('Jumlah harus berupa angka yang valid');
+            } else {
+              throw new Error('Jumlah harus angka positif');
+            }
           }
+          
           if (!data.tanggal) {
             throw new Error('Tanggal harus diisi');
           }
@@ -178,7 +255,7 @@ export const kelolaInputUser = async (dataPemasukan, dataPengeluaran) => {
           const keyBulanTahun = buatKeyBulanTahun(bulan, tahun);
 
           // VALIDASI KHUSUS: Cek duplikasi "Saldo Bulan Lalu"
-          const isSaldoBulanLalu = data.kategori.toLowerCase().includes('saldo bulan lalu');
+          const isSaldoBulanLalu = isKategoriSaldoBulanLalu(data.kategori);
           
           if (isSaldoBulanLalu) {
             // Cek apakah sudah ada "Saldo Bulan Lalu" di bulan ini
@@ -188,7 +265,7 @@ export const kelolaInputUser = async (dataPemasukan, dataPengeluaran) => {
             if (snapshotCheck.exists()) {
               const dataBulananCheck = snapshotCheck.val();
               const sudahAda = dataBulananCheck.kategoriList.some(
-                k => k.namaKategori.toLowerCase().includes('saldo bulan lalu') && k.jenis === jenis
+                k => isKategoriSaldoBulanLalu(k.namaKategori) && k.jenis === jenis
               );
               
               if (sudahAda) {
@@ -205,7 +282,7 @@ export const kelolaInputUser = async (dataPemasukan, dataPengeluaran) => {
             jenis, // 'pemasukan' atau 'pengeluaran'
             kategori: data.kategori,
             uraian: data.uraian,
-            jumlah: data.jumlah,
+            jumlah: data.jumlah, // Bisa positif atau negatif untuk "Saldo Bulan Lalu"
             tanggal: formatTanggal(data.tanggal),
             tanggalUpdate: ambilTimestampSekarang()
           };
@@ -220,7 +297,7 @@ export const kelolaInputUser = async (dataPemasukan, dataPengeluaran) => {
             bulan,
             tahun,
             kategoriList: []
-  };
+          };
 
           if (snapshotBulanan.exists()) {
             dataBulanan = snapshotBulanan.val();
@@ -232,55 +309,44 @@ export const kelolaInputUser = async (dataPemasukan, dataPengeluaran) => {
           );
 
           if (indexKategori >= 0) {
-            // Kategori sudah ada, tambahkan jumlahnya
             dataBulanan.kategoriList[indexKategori].jumlahTotal += data.jumlah;
           } else {
-            // Kategori baru
             dataBulanan.kategoriList.push({
               namaKategori: data.kategori,
               jenis,
-              jumlahTotal: data.jumlah
+              jumlahTotal: data.jumlah // Bisa negatif untuk "Saldo Bulan Lalu"
             });
           }
 
           const pathBulanan = `transaksiBulanan/${idAkun}/${keyBulanTahun}`;
           updates[pathBulanan] = dataBulanan;
 
-          // 3. Update Saldo Akun
-          // SKIP jika kategori adalah "Saldo Bulan Lalu"
+          // 3. PERBAIKAN: Update saldo total di akun HANYA JIKA BUKAN "Saldo Bulan Lalu"
           if (!isSaldoBulanLalu) {
             const refAkun = ref(database, `akun/${idAkun}`);
             const snapshotAkun = await get(refAkun);
             
-            let saldoTotal = 0;
             if (snapshotAkun.exists()) {
-              saldoTotal = snapshotAkun.val().saldoTotal || 0;
+              const dataAkun = snapshotAkun.val();
+              let saldoBaru = dataAkun.saldoTotal || 0;
+              
+              if (jenis === 'pemasukan') {
+                saldoBaru += data.jumlah;
+              } else {
+                saldoBaru -= data.jumlah;
+              }
+              
+              updates[`akun/${idAkun}/saldoTotal`] = saldoBaru;
+              updates[`akun/${idAkun}/tanggalUpdate`] = ambilTimestampSekarang();
             }
-
-            // Update saldo: pemasukan (+), pengeluaran (-)
-            if (jenis === 'pemasukan') {
-              saldoTotal += data.jumlah;
-            } else {
-              saldoTotal -= data.jumlah;
-            }
-
-            updates[`akun/${idAkun}/saldoTotal`] = saldoTotal;
-            updates[`akun/${idAkun}/tanggalUpdate`] = ambilTimestampSekarang();
           }
 
           hasil[jenis].berhasil++;
 
         } catch (error) {
           console.error(`Error proses ${jenis}:`, error);
-          
-          // THROW langsung untuk error duplikasi "Saldo Bulan Lalu"
-          // Error ini harus ditampilkan langsung ke user
-          if (error.message.includes('Saldo Bulan Lalu') && error.message.includes('sudah ada')) {
-            throw error; // Lempar ke atas untuk ditangkap di frontend
-          }
-          
-          // Error validasi biasa (field kosong, dll) hanya increment counter
           hasil[jenis].gagal++;
+          hasil.sukses = false;
         }
       }
     };
@@ -310,22 +376,25 @@ export const kelolaInputUser = async (dataPemasukan, dataPengeluaran) => {
 };
 
 // ==========================================
-// FUNGSI 4: EDIT TRANSAKSI
+// FUNGSI 4 (DIPERBAIKI FINAL): EDIT TRANSAKSI
 // ==========================================
 
 /**
- * Edit transaksi yang sudah ada
- * @param {string} idTransaksi - ID transaksi
- * @param {string} kategoriBaru - Kategori baru (null jika tidak berubah)
- * @param {string} uraianBaru - Uraian baru (null jika tidak berubah)
- * @param {number} jumlahBaru - Jumlah baru (null jika tidak berubah)
+ * Mengedit transaksi yang sudah ada
+ * PERBAIKAN: 
+ * 1. Saldo total tidak berubah jika kategori = "Saldo Bulan Lalu"
+ * 2. Support input minus untuk kategori "Saldo Bulan Lalu"
+ * @param {string} idTransaksi - ID transaksi yang akan diedit
+ * @param {string|null} kategoriBaru - Kategori baru (null jika tidak diubah)
+ * @param {string|null} uraianBaru - Uraian baru (null jika tidak diubah)
+ * @param {number|null} jumlahBaru - Jumlah baru (null jika tidak diubah)
  * @returns {Promise<object>} Hasil operasi
  */
 export const editTransaksi = async (idTransaksi, kategoriBaru, uraianBaru, jumlahBaru) => {
   try {
     const idAkun = getIdAkun();
     
-    // 1. Ambil data transaksi lama
+    // Ambil data transaksi lama
     const refTransaksi = ref(database, `transaksi/${idTransaksi}`);
     const snapshot = await get(refTransaksi);
     
@@ -333,112 +402,143 @@ export const editTransaksi = async (idTransaksi, kategoriBaru, uraianBaru, jumla
       throw new Error('Transaksi tidak ditemukan');
     }
 
-    const dataLama = snapshot.val();
+    const transaksiLama = snapshot.val();
     
-    // Validasi kepemilikan
-    if (dataLama.idAkun !== idAkun) {
-      throw new Error('Anda tidak memiliki akses untuk mengedit transaksi ini');
+    // Validasi ownership
+    if (transaksiLama.idAkun !== idAkun) {
+      throw new Error('Tidak memiliki akses ke transaksi ini');
     }
 
     const updates = {};
-    const { bulan, tahun } = ambilBulanTahun(dataLama.tanggal);
+    const { bulan, tahun } = ambilBulanTahun(transaksiLama.tanggal);
     const keyBulanTahun = buatKeyBulanTahun(bulan, tahun);
 
-    // 2. Update data transaksi
-    if (kategoriBaru && kategoriBaru !== dataLama.kategori) {
+    // CEK apakah kategori lama atau baru adalah "Saldo Bulan Lalu"
+    const kategoriLamaSaldoBulanLalu = isKategoriSaldoBulanLalu(transaksiLama.kategori);
+    const kategoriBaruSaldoBulanLalu = kategoriBaru ? isKategoriSaldoBulanLalu(kategoriBaru) : kategoriLamaSaldoBulanLalu;
+    
+    // Tentukan kategori yang akan digunakan untuk validasi
+    const kategoriUntukValidasi = kategoriBaru || transaksiLama.kategori;
+
+    // 1. Update data transaksi
+    if (kategoriBaru) {
       updates[`transaksi/${idTransaksi}/kategori`] = kategoriBaru;
     }
-    if (uraianBaru && uraianBaru !== dataLama.uraian) {
+    if (uraianBaru !== null && uraianBaru !== undefined) {
       updates[`transaksi/${idTransaksi}/uraian`] = uraianBaru;
     }
-    if (jumlahBaru && jumlahBaru !== dataLama.jumlah) {
+    if (jumlahBaru !== null && jumlahBaru !== undefined) {
+      // PERBAIKAN: Validasi yang support minus untuk "Saldo Bulan Lalu"
+      if (!validasiJumlahTransaksi(jumlahBaru, kategoriUntukValidasi)) {
+        if (isKategoriSaldoBulanLalu(kategoriUntukValidasi)) {
+          throw new Error('Jumlah harus berupa angka yang valid');
+        } else {
+          throw new Error('Jumlah harus angka positif');
+        }
+      }
       updates[`transaksi/${idTransaksi}/jumlah`] = jumlahBaru;
     }
     updates[`transaksi/${idTransaksi}/tanggalUpdate`] = ambilTimestampSekarang();
 
-    // 3. Update Transaksi Bulanan jika ada perubahan kategori atau jumlah
-    if ((kategoriBaru && kategoriBaru !== dataLama.kategori) || 
-        (jumlahBaru && jumlahBaru !== dataLama.jumlah)) {
+    // 2. Update transaksi bulanan
+    const refBulanan = ref(database, `transaksiBulanan/${idAkun}/${keyBulanTahun}`);
+    const snapshotBulanan = await get(refBulanan);
+    
+    if (snapshotBulanan.exists()) {
+      let dataBulanan = snapshotBulanan.val();
       
-      // Ambil data bulanan
-      const refBulanan = ref(database, `transaksiBulanan/${idAkun}/${keyBulanTahun}`);
-      const snapshotBulanan = await get(refBulanan);
+      // Kurangi jumlah dari kategori lama
+      const indexKategoriLama = dataBulanan.kategoriList.findIndex(
+        k => k.namaKategori === transaksiLama.kategori && k.jenis === transaksiLama.jenis
+      );
       
-      if (snapshotBulanan.exists()) {
-        let dataBulanan = snapshotBulanan.val();
+      if (indexKategoriLama >= 0) {
+        dataBulanan.kategoriList[indexKategoriLama].jumlahTotal -= transaksiLama.jumlah;
         
-        // Kurangi dari kategori lama
-        const indexLama = dataBulanan.kategoriList.findIndex(
-          k => k.namaKategori === dataLama.kategori && k.jenis === dataLama.jenis
-        );
-        
-        if (indexLama >= 0) {
-          dataBulanan.kategoriList[indexLama].jumlahTotal -= dataLama.jumlah;
-          
-          // Hapus kategori jika total = 0
-          if (dataBulanan.kategoriList[indexLama].jumlahTotal <= 0) {
-            dataBulanan.kategoriList.splice(indexLama, 1);
+        // Hapus kategori jika jumlahTotal = 0
+        if (dataBulanan.kategoriList[indexKategoriLama].jumlahTotal === 0) {
+          dataBulanan.kategoriList.splice(indexKategoriLama, 1);
+        }
+      }
+      
+      // Tambah jumlah ke kategori baru
+      const kategoriAkhir = kategoriBaru || transaksiLama.kategori;
+      const jumlahAkhir = jumlahBaru !== null && jumlahBaru !== undefined ? jumlahBaru : transaksiLama.jumlah;
+      
+      const indexKategoriBaru = dataBulanan.kategoriList.findIndex(
+        k => k.namaKategori === kategoriAkhir && k.jenis === transaksiLama.jenis
+      );
+      
+      if (indexKategoriBaru >= 0) {
+        dataBulanan.kategoriList[indexKategoriBaru].jumlahTotal += jumlahAkhir;
+      } else {
+        dataBulanan.kategoriList.push({
+          namaKategori: kategoriAkhir,
+          jenis: transaksiLama.jenis,
+          jumlahTotal: jumlahAkhir
+        });
+      }
+      
+      updates[`transaksiBulanan/${idAkun}/${keyBulanTahun}`] = dataBulanan;
+    }
+
+    // 3. PERBAIKAN: Update saldo total
+    // Saldo berubah jika:
+    // - Kategori lama BUKAN "Saldo Bulan Lalu" DAN jumlah berubah
+    // - Atau kategori berubah dari/ke "Saldo Bulan Lalu"
+    
+    const refAkun = ref(database, `akun/${idAkun}`);
+    const snapshotAkun = await get(refAkun);
+    
+    if (snapshotAkun.exists()) {
+      const dataAkun = snapshotAkun.val();
+      let saldoBaru = dataAkun.saldoTotal || 0;
+      let perluUpdateSaldo = false;
+      
+      // Kasus 1: Kategori tidak berubah DAN bukan "Saldo Bulan Lalu" DAN jumlah berubah
+      if (!kategoriBaru && !kategoriLamaSaldoBulanLalu && jumlahBaru !== null && jumlahBaru !== undefined) {
+        const selisih = jumlahBaru - transaksiLama.jumlah;
+        if (transaksiLama.jenis === 'pemasukan') {
+          saldoBaru += selisih;
+        } else {
+          saldoBaru -= selisih;
+        }
+        perluUpdateSaldo = true;
+      }
+      
+      // Kasus 2: Kategori berubah
+      if (kategoriBaru && kategoriBaru !== transaksiLama.kategori) {
+        // Batalkan efek transaksi lama (jika bukan saldo bulan lalu)
+        if (!kategoriLamaSaldoBulanLalu) {
+          if (transaksiLama.jenis === 'pemasukan') {
+            saldoBaru -= transaksiLama.jumlah;
+          } else {
+            saldoBaru += transaksiLama.jumlah;
           }
         }
         
-        // Tambah ke kategori baru
-        const kategoriFinal = kategoriBaru || dataLama.kategori;
-        const jumlahFinal = jumlahBaru || dataLama.jumlah;
-        
-        const indexBaru = dataBulanan.kategoriList.findIndex(
-          k => k.namaKategori === kategoriFinal && k.jenis === dataLama.jenis
-        );
-        
-        if (indexBaru >= 0) {
-          dataBulanan.kategoriList[indexBaru].jumlahTotal += jumlahFinal;
-        } else {
-          dataBulanan.kategoriList.push({
-            namaKategori: kategoriFinal,
-            jenis: dataLama.jenis,
-            jumlahTotal: jumlahFinal
-          });
+        // Terapkan efek transaksi baru (jika bukan saldo bulan lalu)
+        if (!kategoriBaruSaldoBulanLalu) {
+          const jumlahAkhir = jumlahBaru !== null && jumlahBaru !== undefined ? jumlahBaru : transaksiLama.jumlah;
+          if (transaksiLama.jenis === 'pemasukan') {
+            saldoBaru += jumlahAkhir;
+          } else {
+            saldoBaru -= jumlahAkhir;
+          }
         }
         
-        updates[`transaksiBulanan/${idAkun}/${keyBulanTahun}`] = dataBulanan;
+        perluUpdateSaldo = true;
       }
-    }
-
-    // 4. Update Saldo Akun jika jumlah berubah
-    // SKIP jika kategori lama atau baru adalah "Saldo Bulan Lalu"
-    const isSaldoBulanLamaLama = dataLama.kategori.toLowerCase().includes('saldo bulan lalu');
-    const isSaldoBulanLaluBaru = kategoriBaru && kategoriBaru.toLowerCase().includes('saldo bulan lalu');
-    
-    if (jumlahBaru && jumlahBaru !== dataLama.jumlah && !isSaldoBulanLamaLama && !isSaldoBulanLaluBaru) {
-      const refAkun = ref(database, `akun/${idAkun}`);
-      const snapshotAkun = await get(refAkun);
       
-      if (snapshotAkun.exists()) {
-        let saldoTotal = snapshotAkun.val().saldoTotal || 0;
-        
-        // Kembalikan jumlah lama
-        if (dataLama.jenis === 'pemasukan') {
-          saldoTotal -= dataLama.jumlah;
-        } else {
-          saldoTotal += dataLama.jumlah;
-        }
-        
-        // Tambahkan jumlah baru
-        if (dataLama.jenis === 'pemasukan') {
-          saldoTotal += jumlahBaru;
-        } else {
-          saldoTotal -= jumlahBaru;
-        }
-        
-        updates[`akun/${idAkun}/saldoTotal`] = saldoTotal;
+      if (perluUpdateSaldo) {
+        updates[`akun/${idAkun}/saldoTotal`] = saldoBaru;
         updates[`akun/${idAkun}/tanggalUpdate`] = ambilTimestampSekarang();
       }
     }
 
-    // Simpan updates
-    if (Object.keys(updates).length > 0) {
-      const dbRef = ref(database);
-      await update(dbRef, updates);
-    }
+    // Simpan semua updates
+    const dbRef = ref(database);
+    await update(dbRef, updates);
 
     return {
       sukses: true,
@@ -447,16 +547,19 @@ export const editTransaksi = async (idTransaksi, kategoriBaru, uraianBaru, jumla
 
   } catch (error) {
     console.error('Error edit transaksi:', error);
-    throw new Error('Gagal mengedit transaksi: ' + error.message);
+    throw new Error('Gagal edit transaksi: ' + error.message);
   }
 };
 
+
 // ==========================================
-// FUNGSI 5: HAPUS TRANSAKSI
+// FUNGSI 5 (DIPERBAIKI): HAPUS TRANSAKSI
 // ==========================================
 
 /**
- * Hapus transaksi
+ * Menghapus transaksi
+ * PERBAIKAN: Saldo total tidak berubah jika kategori = "Saldo Bulan Lalu"
+ * (Sudah support minus karena hanya baca data yang sudah ada)
  * @param {string} idTransaksi - ID transaksi yang akan dihapus
  * @returns {Promise<object>} Hasil operasi
  */
@@ -464,7 +567,7 @@ export const hapusTransaksi = async (idTransaksi) => {
   try {
     const idAkun = getIdAkun();
     
-    // 1. Ambil data transaksi
+    // Ambil data transaksi
     const refTransaksi = ref(database, `transaksi/${idTransaksi}`);
     const snapshot = await get(refTransaksi);
     
@@ -472,37 +575,40 @@ export const hapusTransaksi = async (idTransaksi) => {
       throw new Error('Transaksi tidak ditemukan');
     }
 
-    const data = snapshot.val();
+    const transaksi = snapshot.val();
     
-    // Validasi kepemilikan
-    if (data.idAkun !== idAkun) {
-      throw new Error('Anda tidak memiliki akses untuk menghapus transaksi ini');
+    // Validasi ownership
+    if (transaksi.idAkun !== idAkun) {
+      throw new Error('Tidak memiliki akses ke transaksi ini');
     }
 
+    // CEK apakah kategori adalah "Saldo Bulan Lalu"
+    const isSaldoBulanLalu = isKategoriSaldoBulanLalu(transaksi.kategori);
+
     const updates = {};
-    const { bulan, tahun } = ambilBulanTahun(data.tanggal);
+    const { bulan, tahun } = ambilBulanTahun(transaksi.tanggal);
     const keyBulanTahun = buatKeyBulanTahun(bulan, tahun);
 
-    // 2. Hapus transaksi
+    // 1. Hapus transaksi
     updates[`transaksi/${idTransaksi}`] = null;
 
-    // 3. Update Transaksi Bulanan
+    // 2. Update transaksi bulanan
     const refBulanan = ref(database, `transaksiBulanan/${idAkun}/${keyBulanTahun}`);
     const snapshotBulanan = await get(refBulanan);
     
     if (snapshotBulanan.exists()) {
       let dataBulanan = snapshotBulanan.val();
       
-      // Kurangi dari kategori
+      // Kurangi jumlah dari kategori
       const indexKategori = dataBulanan.kategoriList.findIndex(
-        k => k.namaKategori === data.kategori && k.jenis === data.jenis
+        k => k.namaKategori === transaksi.kategori && k.jenis === transaksi.jenis
       );
       
       if (indexKategori >= 0) {
-        dataBulanan.kategoriList[indexKategori].jumlahTotal -= data.jumlah;
+        dataBulanan.kategoriList[indexKategori].jumlahTotal -= transaksi.jumlah;
         
-        // Hapus kategori jika total <= 0
-        if (dataBulanan.kategoriList[indexKategori].jumlahTotal <= 0) {
+        // Hapus kategori jika jumlahTotal = 0
+        if (dataBulanan.kategoriList[indexKategori].jumlahTotal === 0) {
           dataBulanan.kategoriList.splice(indexKategori, 1);
         }
       }
@@ -515,30 +621,29 @@ export const hapusTransaksi = async (idTransaksi) => {
       }
     }
 
-    // 4. Update Saldo Akun
-    // SKIP jika kategori adalah "Saldo Bulan Lalu"
-    const isSaldoBulanLalu = data.kategori.toLowerCase().includes('saldo bulan lalu');
-    
+    // 3. PERBAIKAN: Update saldo total HANYA JIKA BUKAN "Saldo Bulan Lalu"
     if (!isSaldoBulanLalu) {
       const refAkun = ref(database, `akun/${idAkun}`);
       const snapshotAkun = await get(refAkun);
       
       if (snapshotAkun.exists()) {
-        let saldoTotal = snapshotAkun.val().saldoTotal || 0;
+        const dataAkun = snapshotAkun.val();
+        let saldoBaru = dataAkun.saldoTotal || 0;
         
-        // Kembalikan saldo
-        if (data.jenis === 'pemasukan') {
-          saldoTotal -= data.jumlah;
+        // Kembalikan saldo (kebalikan dari transaksi)
+        // Sudah otomatis support minus karena hanya baca transaksi.jumlah
+        if (transaksi.jenis === 'pemasukan') {
+          saldoBaru -= transaksi.jumlah;
         } else {
-          saldoTotal += data.jumlah;
+          saldoBaru += transaksi.jumlah;
         }
         
-        updates[`akun/${idAkun}/saldoTotal`] = saldoTotal;
+        updates[`akun/${idAkun}/saldoTotal`] = saldoBaru;
         updates[`akun/${idAkun}/tanggalUpdate`] = ambilTimestampSekarang();
       }
     }
 
-    // Simpan updates
+    // Simpan semua updates
     const dbRef = ref(database);
     await update(dbRef, updates);
 
@@ -549,7 +654,7 @@ export const hapusTransaksi = async (idTransaksi) => {
 
   } catch (error) {
     console.error('Error hapus transaksi:', error);
-    throw new Error('Gagal menghapus transaksi: ' + error.message);
+    throw new Error('Gagal hapus transaksi: ' + error.message);
   }
 };
 
@@ -622,10 +727,12 @@ export const filterDataTransaksi = async (filter) => {
 // ==========================================
 
 /**
- * Review pemasukan dan pengeluaran bulanan
+ * Review pemasukan dan pengeluaran per bulan
+ * PERBAIKAN: Kategori "Saldo Bulan Lalu" tidak dihitung dalam total dashboard
+ * tapi tetap muncul di laporan (kategoriList)
  * @param {number} bulan - Bulan (1-12)
  * @param {number} tahun - Tahun
- * @returns {Promise<object>} Data review
+ * @returns {Promise<object>} Data review bulanan
  */
 export const reviewPemasukanPengeluaranBulanan = async (bulan, tahun) => {
   try {
@@ -639,38 +746,52 @@ export const reviewPemasukanPengeluaranBulanan = async (bulan, tahun) => {
       bulan,
       tahun,
       pemasukan: {
+        kategoriList: [],
         totalKeseluruhan: 0,
-        kategoriList: []
+        totalDashboard: 0 // TAMBAHAN: Total untuk dashboard (tanpa saldo bulan lalu)
       },
       pengeluaran: {
+        kategoriList: [],
         totalKeseluruhan: 0,
-        kategoriList: []
+        totalDashboard: 0 // TAMBAHAN: Total untuk dashboard (tanpa saldo bulan lalu)
       },
-      saldo: 0
+      saldo: 0,
+      saldoDashboard: 0 // TAMBAHAN: Saldo untuk dashboard
     };
 
     if (snapshot.exists()) {
       const data = snapshot.val();
       
-      // Pisahkan pemasukan dan pengeluaran
-      data.kategoriList.forEach(item => {
-        if (item.jenis === 'pemasukan') {
-          hasil.pemasukan.kategoriList.push({
-            namaKategori: item.namaKategori,
-            jumlahTotal: item.jumlahTotal
-          });
-          hasil.pemasukan.totalKeseluruhan += item.jumlahTotal;
-        } else {
-          hasil.pengeluaran.kategoriList.push({
-            namaKategori: item.namaKategori,
-            jumlahTotal: item.jumlahTotal
-          });
-          hasil.pengeluaran.totalKeseluruhan += item.jumlahTotal;
-        }
-      });
+      if (data.kategoriList && Array.isArray(data.kategoriList)) {
+        data.kategoriList.forEach(item => {
+          const isSaldoBulanLalu = isKategoriSaldoBulanLalu(item.namaKategori);
+          
+          if (item.jenis === 'pemasukan') {
+            hasil.pemasukan.kategoriList.push(item);
+            hasil.pemasukan.totalKeseluruhan += item.jumlahTotal;
+            
+            // PERBAIKAN: Hanya tambahkan ke totalDashboard jika BUKAN "Saldo Bulan Lalu"
+            if (!isSaldoBulanLalu) {
+              hasil.pemasukan.totalDashboard += item.jumlahTotal;
+            }
+          } else if (item.jenis === 'pengeluaran') {
+            hasil.pengeluaran.kategoriList.push(item);
+            hasil.pengeluaran.totalKeseluruhan += item.jumlahTotal;
+            
+            // PERBAIKAN: Hanya tambahkan ke totalDashboard jika BUKAN "Saldo Bulan Lalu"
+            if (!isSaldoBulanLalu) {
+              hasil.pengeluaran.totalDashboard += item.jumlahTotal;
+            }
+          }
+        });
+      }
     }
 
+    // Hitung saldo (totalKeseluruhan tetap pakai semua kategori untuk laporan)
     hasil.saldo = hasil.pemasukan.totalKeseluruhan - hasil.pengeluaran.totalKeseluruhan;
+    
+    // PERBAIKAN: Hitung saldoDashboard (tanpa saldo bulan lalu)
+    hasil.saldoDashboard = hasil.pemasukan.totalDashboard - hasil.pengeluaran.totalDashboard;
 
     return hasil;
 
@@ -680,28 +801,38 @@ export const reviewPemasukanPengeluaranBulanan = async (bulan, tahun) => {
   }
 };
 
+
 // ==========================================
-// FUNGSI 8: DATA DASHBOARD
+// FUNGSI 8 (DIPERBAIKI): AMBIL DATA DASHBOARD
 // ==========================================
 
 /**
- * Ambil data untuk dashboard
+ * Mengambil data untuk dashboard
+ * PERBAIKAN: 
+ * 1. Total pemasukan/pengeluaran tidak termasuk "Saldo Bulan Lalu"
+ * 2. Support nilai minus
  * @returns {Promise<object>} Data dashboard
  */
 export const ambilDataDashboard = async () => {
   try {
     const idAkun = getIdAkun();
-    const sekarang = new Date();
-    const bulanIni = sekarang.getMonth() + 1;
-    const tahunIni = sekarang.getFullYear();
-
-    // 1. Ambil total keseluruhan dari akun
+    
+    // 1. Ambil saldo total dari akun
     const refAkun = ref(database, `akun/${idAkun}`);
     const snapshotAkun = await get(refAkun);
     
-    const saldoTotal = snapshotAkun.exists() ? snapshotAkun.val().saldoTotal || 0 : 0;
+    let saldoTotal = 0;
+    if (snapshotAkun.exists()) {
+      const dataAkun = snapshotAkun.val();
+      saldoTotal = dataAkun.saldoTotal || 0;
+    }
 
-    // 2. Hitung total pemasukan dan pengeluaran keseluruhan
+    // 2. PERBAIKAN: Hitung total pemasukan dan pengeluaran dari transaksi
+    // TIDAK termasuk kategori "Saldo Bulan Lalu"
+    const sekarang = new Date();
+    const bulanIni = sekarang.getMonth() + 1;
+    const tahunIni = sekarang.getFullYear();
+    
     const refTransaksi = ref(database, 'transaksi');
     const snapshotTransaksi = await get(refTransaksi);
     
@@ -712,16 +843,19 @@ export const ambilDataDashboard = async () => {
       const dataTransaksi = snapshotTransaksi.val();
       Object.values(dataTransaksi).forEach(t => {
         if (t.idAkun === idAkun) {
-          if (t.jenis === 'pemasukan') {
-            totalPemasukan += t.jumlah;
-          } else {
-            totalPengeluaran += t.jumlah;
+          // PERBAIKAN: Skip kategori "Saldo Bulan Lalu"
+          if (!isKategoriSaldoBulanLalu(t.kategori)) {
+            if (t.jenis === 'pemasukan') {
+              totalPemasukan += t.jumlah; // Support minus
+            } else {
+              totalPengeluaran += t.jumlah; // Support minus
+            }
           }
         }
       });
     }
 
-    // 3. Data bulan ini
+    // 3. Data bulan ini (gunakan totalDashboard yang sudah exclude saldo bulan lalu)
     const dataBulanIni = await reviewPemasukanPengeluaranBulanan(bulanIni, tahunIni);
 
     return {
@@ -733,8 +867,14 @@ export const ambilDataDashboard = async () => {
       bulanIni: {
         bulan: bulanIni,
         tahun: tahunIni,
-        pemasukan: dataBulanIni.pemasukan,
-        pengeluaran: dataBulanIni.pengeluaran,
+        pemasukan: {
+          kategoriList: dataBulanIni.pemasukan.kategoriList,
+          totalKeseluruhan: dataBulanIni.pemasukan.totalKeseluruhan
+        },
+        pengeluaran: {
+          kategoriList: dataBulanIni.pengeluaran.kategoriList,
+          totalKeseluruhan: dataBulanIni.pengeluaran.totalKeseluruhan
+        },
         saldo: dataBulanIni.saldo
       }
     };
@@ -744,6 +884,7 @@ export const ambilDataDashboard = async () => {
     throw new Error('Gagal mengambil data dashboard: ' + error.message);
   }
 };
+
 
 // ==========================================
 // FUNGSI 9: DATA GRAFIK
@@ -784,5 +925,186 @@ export const ambilDataGrafik = async () => {
   } catch (error) {
     console.error('Error ambil data grafik:', error);
     throw new Error('Gagal mengambil data grafik: ' + error.message);
+  }
+};
+
+// ==========================================
+// FUNGSI 10: SET SALDO AWAL (UPDATED)
+// ==========================================
+
+/**
+ * Set saldo awal untuk user baru
+ * Saldo awal akan disimpan sebagai transaksi pemasukan dengan kategori "Saldo Awal"
+ * @param {number} saldoAwal - Jumlah saldo awal
+ * @param {string} tanggal - Tanggal saldo awal (YYYY-MM-DD)
+ * @returns {Promise<object>} Hasil operasi
+ */
+export const setSaldoAwal = async (saldoAwal, tanggal) => {
+  try {
+    const idAkun = getIdAkun();
+    
+    // Validasi saldo awal harus angka dan tidak negatif
+    if (typeof saldoAwal !== 'number' || saldoAwal < 0) {
+      throw new Error('Saldo awal harus angka positif atau 0');
+    }
+
+    // Validasi tanggal
+    if (!tanggal) {
+      throw new Error('Tanggal harus diisi');
+    }
+
+    const refAkun = ref(database, `akun/${idAkun}`);
+    const snapshot = await get(refAkun);
+    
+    if (!snapshot.exists()) {
+      throw new Error('Akun tidak ditemukan');
+    }
+
+    const dataAkun = snapshot.val();
+    
+    // Cek apakah saldo awal sudah pernah diset
+    if (dataAkun.saldoAwalDiSet) {
+      throw new Error('Saldo awal sudah pernah diset sebelumnya');
+    }
+
+    const updates = {};
+    const NAMA_KATEGORI_SALDO_AWAL = "Saldo Awal";
+
+    // 1. Cek dan buat kategori "Saldo Awal" jika belum ada
+    const refKategoriPemasukan = ref(database, `kategori/${idAkun}/pemasukan`);
+    const snapshotKategori = await get(refKategoriPemasukan);
+    
+    let kategoriSaldoAwalId = null;
+    
+    if (snapshotKategori.exists()) {
+      const kategoriList = Object.values(snapshotKategori.val());
+      const kategoriSaldoAwal = kategoriList.find(
+        k => k.namaKategori.toLowerCase() === NAMA_KATEGORI_SALDO_AWAL.toLowerCase()
+      );
+      
+      if (kategoriSaldoAwal) {
+        kategoriSaldoAwalId = kategoriSaldoAwal.id;
+      }
+    }
+
+    // Buat kategori "Saldo Awal" jika belum ada
+    if (!kategoriSaldoAwalId) {
+      kategoriSaldoAwalId = buatIdUnik();
+      const pathKategori = `kategori/${idAkun}/pemasukan/${kategoriSaldoAwalId}`;
+      updates[pathKategori] = {
+        id: kategoriSaldoAwalId,
+        namaKategori: NAMA_KATEGORI_SALDO_AWAL,
+        tanggalDibuat: ambilTimestampSekarang()
+      };
+    }
+
+    // 2. Buat transaksi pemasukan dengan kategori "Saldo Awal"
+    if (saldoAwal > 0) {
+      const idTransaksi = buatIdUnik();
+      const { bulan, tahun } = ambilBulanTahun(tanggal);
+      const keyBulanTahun = buatKeyBulanTahun(bulan, tahun);
+
+      // Simpan transaksi
+      const pathTransaksi = `transaksi/${idTransaksi}`;
+      updates[pathTransaksi] = {
+        idTransaksi,
+        idAkun,
+        jenis: 'pemasukan',
+        kategori: NAMA_KATEGORI_SALDO_AWAL,
+        uraian: 'Saldo awal pencatatan keuangan',
+        jumlah: saldoAwal,
+        tanggal: formatTanggal(tanggal),
+        tanggalUpdate: ambilTimestampSekarang()
+      };
+
+      // 3. Update Transaksi Bulanan
+      const refBulanan = ref(database, `transaksiBulanan/${idAkun}/${keyBulanTahun}`);
+      const snapshotBulanan = await get(refBulanan);
+      
+      let dataBulanan = {
+        idAkun,
+        bulan,
+        tahun,
+        kategoriList: []
+      };
+
+      if (snapshotBulanan.exists()) {
+        dataBulanan = snapshotBulanan.val();
+      }
+
+      // Tambah atau update kategori saldo awal di transaksi bulanan
+      const indexKategori = dataBulanan.kategoriList.findIndex(
+        k => k.namaKategori === NAMA_KATEGORI_SALDO_AWAL && k.jenis === 'pemasukan'
+      );
+
+      if (indexKategori >= 0) {
+        dataBulanan.kategoriList[indexKategori].jumlahTotal += saldoAwal;
+      } else {
+        dataBulanan.kategoriList.push({
+          namaKategori: NAMA_KATEGORI_SALDO_AWAL,
+          jenis: 'pemasukan',
+          jumlahTotal: saldoAwal
+        });
+      }
+
+      const pathBulanan = `transaksiBulanan/${idAkun}/${keyBulanTahun}`;
+      updates[pathBulanan] = dataBulanan;
+    }
+
+    // 4. Update data akun
+    updates[`akun/${idAkun}/saldoTotal`] = saldoAwal;
+    updates[`akun/${idAkun}/saldoAwal`] = saldoAwal;
+    updates[`akun/${idAkun}/saldoAwalDiSet`] = true;
+    updates[`akun/${idAkun}/tanggalSaldoAwal`] = formatTanggal(tanggal);
+    updates[`akun/${idAkun}/tanggalUpdate`] = ambilTimestampSekarang();
+
+    // 5. Simpan semua updates
+    const dbRef = ref(database);
+    await update(dbRef, updates);
+
+    return {
+      sukses: true,
+      message: 'Saldo awal berhasil diset dan tercatat sebagai transaksi pemasukan',
+      saldoAwal,
+      tanggal
+    };
+
+  } catch (error) {
+    console.error('Error set saldo awal:', error);
+    throw new Error('Gagal set saldo awal: ' + error.message);
+  }
+};
+
+// ==========================================
+// FUNGSI 11: CEK STATUS SALDO AWAL
+// ==========================================
+
+/**
+ * Cek apakah user sudah set saldo awal
+ * @returns {Promise<object>} Status saldo awal
+ */
+export const cekStatusSaldoAwal = async () => {
+  try {
+    const idAkun = getIdAkun();
+    const refAkun = ref(database, `akun/${idAkun}`);
+    const snapshot = await get(refAkun);
+    
+    if (!snapshot.exists()) {
+      return {
+        sudahDiSet: false,
+        saldoAwal: 0
+      };
+    }
+
+    const dataAkun = snapshot.val();
+    
+    return {
+      sudahDiSet: dataAkun.saldoAwalDiSet || false,
+      saldoAwal: dataAkun.saldoAwal || 0
+    };
+
+  } catch (error) {
+    console.error('Error cek status saldo awal:', error);
+    throw new Error('Gagal cek status saldo awal: ' + error.message);
   }
 };

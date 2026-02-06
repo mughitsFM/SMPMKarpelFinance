@@ -46,3 +46,7 @@ yarn-error.log*
 **/seed.js
 /manajemen-keuangan copy.js
 /fungsi-tambahan-be copy.js
+/auth-firebase copy.js
+/src/components/PopUp copy.css
+/src/App copy.jsx
+/src/pages/Login copy.jsx
